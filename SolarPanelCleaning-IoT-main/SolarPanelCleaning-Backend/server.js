@@ -8,7 +8,7 @@ dotenv.config();
 // --- 1. INITIALIZE EXPRESS APP ---
 const app = express();
 app.use(express.json()); // Middleware to parse JSON bodies
-app.use(cors());
+app.use(cors({ origin: ['https://solar-clening.api.ionode.cloud', 'http://localhost:5173'] }));
 
 // --- 2. DATABASE CONNECTION ---
 // Reusing the connection string. Data will be stored in a new collection.

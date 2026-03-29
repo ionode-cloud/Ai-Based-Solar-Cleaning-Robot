@@ -23,7 +23,7 @@ dummyData.power = dummyData.voltage * dummyData.current;
 
 console.log("Sending dummy data...");
 
-fetch("http://localhost:62888/api/solar-data", {
+fetch("https://solar-clening.ionode.cloud/api/solar-data", {
   method: "POST",
   headers: {
     "Content-Type": "application/json"

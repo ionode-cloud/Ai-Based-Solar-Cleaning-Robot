@@ -1,6 +1,6 @@
 Solar Panel Cleaning IoT - API Documentation
 
-Base URL: http://localhost:62888 (Default port)
+Base URL: https://solar-clening.ionode.cloud (Production) / http://localhost:62888 (Development)
 
 --------------------------------------------------
 1. Create or Update Solar Panel Data
