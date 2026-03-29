@@ -1,0 +1,114 @@
+Solar Panel Cleaning IoT - API Documentation
+
+Base URL: http://localhost:62888 (Default port)
+
+--------------------------------------------------
+1. Create or Update Solar Panel Data
+--------------------------------------------------
+- URL: /api/solar-data
+- Method: POST
+- Description: Creates a new record for solar panel data in the database.
+
+Request Body (JSON Example):
+{
+  "voltage": 12.5,
+  "current": 2.1,
+  "power": 26.25,
+  "energyToday": 150.5,
+  "avgPower": 25.0,
+  "avgVoltage": 12.0,
+  "efficiency": 0.85,
+  "temperature": 35.5,
+  "aqi": 45,
+  "climate": "Clean",
+  "moisture": 10,
+  "dustStatus": {
+    "status": "Dusty",
+    "dustLevel": 4,
+    "forceCleaningStatus": false
+  },
+  "messageLogs": ["System started", "Dust detected"]
+}
+
+Success Response (201 Created):
+{
+  "message": "Data saved successfully.",
+  "data": {
+    "_id": "60d5ecb...",
+    "voltage": 12.5,
+    "current": 2.1,
+    "power": 26.25,
+    "energyToday": 150.5,
+    "avgPower": 25.0,
+    "avgVoltage": 12.0,
+    "efficiency": 0.85,
+    "temperature": 35.5,
+    "aqi": 45,
+    "climate": "Clean",
+    "moisture": 10,
+    "dustStatus": {
+      "status": "Dusty",
+      "dustLevel": 4,
+      "forceCleaningStatus": false
+    },
+    "messageLogs": [
+      "System started",
+      "Dust detected"
+    ],
+    "createdAt": "2023-10-25T10:00:00.000Z",
+    "updatedAt": "2023-10-25T10:00:00.000Z"
+  }
+}
+
+
+--------------------------------------------------
+2. Get Latest Solar Panel Data
+--------------------------------------------------
+- URL: /api/solar-data
+- Method: GET
+- Description: Fetches the most recently recorded solar panel data.
+
+Request Body:
+None
+
+Success Response (200 OK):
+{
+  "message": "Data fetched successfully.",
+  "data": {
+    "_id": "60d5ecb...",
+    "voltage": 12.5,
+    "current": 2.1,
+    "power": 26.25,
+    "energyToday": 150.5,
+    "avgPower": 25.0,
+    "avgVoltage": 12.0,
+    "efficiency": 0.85,
+    "temperature": 35.5,
+    "aqi": 45,
+    "climate": "Clean",
+    "moisture": 10,
+    "dustStatus": {
+      "status": "Dusty",
+      "dustLevel": 4,
+      "forceCleaningStatus": false
+    },
+    "messageLogs": [
+      "System started",
+      "Dust detected"
+    ],
+    "createdAt": "2023-10-25T10:00:00.000Z",
+    "updatedAt": "2023-10-25T10:00:00.000Z"
+  }
+}
+
+--------------------------------------------------
+3. Server Welcome Route
+--------------------------------------------------
+- URL: /
+- Method: GET
+- Description: Root endpoint to check if the server is running.
+
+Success Response (200 OK):
+{
+  "message": "Solar Panel monitoring server is working. Use /solar-data to interact with the API."
+}
