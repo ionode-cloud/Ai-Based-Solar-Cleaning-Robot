@@ -1,114 +1,267 @@
-Solar Panel Cleaning IoT - API Documentation
+================================================================================
+  Solar Panel Cleaning IoT — API Documentation
+  AI-Based Autonomous Cleaning Robot System
+  Last Updated: 2026-04-06
+================================================================================
 
-Base URL: https://solar-clening.ionode.cloud (Production) / http://localhost:62888 (Development)
+BASE URLs
+---------
+  Production  : https://solar-clening.ionode.cloud
+  Development : http://localhost:62888
 
---------------------------------------------------
-1. Create or Update Solar Panel Data
---------------------------------------------------
-- URL: /api/solar-data
-- Method: POST
-- Description: Creates a new record for solar panel data in the database.
+  Frontend (Production)  : https://solar-clening.api.ionode.cloud
+  Frontend (Development) : http://localhost:5173
 
-Request Body (JSON Example):
-{
-  "voltage": 12.5,
-  "current": 2.1,
-  "power": 26.25,
-  "energyToday": 150.5,
-  "avgPower": 25.0,
-  "avgVoltage": 12.0,
-  "efficiency": 0.85,
-  "temperature": 35.5,
-  "aqi": 45,
-  "climate": "Clean",
-  "moisture": 10,
-  "dustStatus": {
-    "status": "Dusty",
-    "dustLevel": 4,
-    "forceCleaningStatus": false
-  },
-  "messageLogs": ["System started", "Dust detected"]
-}
+DATABASE
+--------
+  Provider   : MongoDB Atlas
+  Database   : solar-cleaning
+  Collection : solarpanels
 
-Success Response (201 Created):
-{
-  "message": "Data saved successfully.",
-  "data": {
-    "_id": "60d5ecb...",
-    "voltage": 12.5,
-    "current": 2.1,
-    "power": 26.25,
-    "energyToday": 150.5,
-    "avgPower": 25.0,
-    "avgVoltage": 12.0,
-    "efficiency": 0.85,
-    "temperature": 35.5,
-    "aqi": 45,
-    "climate": "Clean",
-    "moisture": 10,
-    "dustStatus": {
-      "status": "Dusty",
-      "dustLevel": 4,
-      "forceCleaningStatus": false
+================================================================================
+  ENDPOINTS
+================================================================================
+
+--------------------------------------------------------------------------------
+1. Create Solar Panel Data
+--------------------------------------------------------------------------------
+  URL     : /api/solar-data
+  Method  : POST
+  Access  : Public
+  Description:
+    Creates a new document in the solarpanels collection.
+    Each POST call always inserts a NEW record (not upsert/update).
+    The response returns the latest record sorted by createdAt (descending).
+
+  Request Headers:
+    Content-Type: application/json
+
+  Request Body (all fields optional — defaults apply if omitted):
+  {
+    "voltage"       : 12.5,            // Number  | Default: 0
+    "soc"           : 85,              // Number  | Default: 0  (Percentage 0-100)
+    "temperature"   : 35.5,            // Number  | Default: 0
+    "dustStatus"    : {
+      "status"              : "Dusty", // String  | Default: "Clean"
+      "dustLevel"           : 65,      // Number  | Default: 0  (0–100 percentage)
+      "forceCleaningStatus" : false    // Boolean | Default: false
     },
-    "messageLogs": [
-      "System started",
-      "Dust detected"
-    ],
-    "createdAt": "2023-10-25T10:00:00.000Z",
-    "updatedAt": "2023-10-25T10:00:00.000Z"
+    "operationMode" : "Auto",          // String  | Default: "Auto"  ("Auto" | "Manual")
+    "cleaningMode"  : "Dry",           // String  | Default: "Dry"   ("Dry"  | "Wet")
+    "messageLogs"   : ["System started", "Dust detected"] // String[] | Default: []
   }
-}
+
+  Success Response — 201 Created:
+  {
+    "message": "Data saved successfully.",
+    "data": {
+      "_id"          : "60d5ecb54b24a1a3c8f1e2b7",
+      "voltage"      : 12.5,
+      "soc"          : 85,
+      "temperature"  : 35.5,
+      "dustStatus"   : {
+        "status"              : "Dusty",
+        "dustLevel"           : 65,
+        "forceCleaningStatus" : false
+      },
+      "operationMode" : "Auto",
+      "cleaningMode"  : "Dry",
+      "messageLogs"   : ["System started", "Dust detected"],
+      "createdAt"     : "2026-04-06T09:00:00.000Z",
+      "updatedAt"     : "2026-04-06T09:00:00.000Z"
+    }
+  }
+
+  Error Responses:
+    400 Bad Request  — Request body is empty:
+      { "message": "Request body cannot be empty." }
+
+    500 Internal Server Error — Database write failure:
+      { "message": "Failed to save data.", "error": "<error details>" }
+
+  Postman / cURL Example:
+    curl -X POST https://solar-clening.ionode.cloud/api/solar-data \
+      -H "Content-Type: application/json" \
+      -d '{
+        "voltage": 12.5,
+        "soc": 85,
+        "temperature": 35.5,
+        "dustStatus": { "status": "Dusty", "dustLevel": 65, "forceCleaningStatus": false },
+        "operationMode": "Auto",
+        "cleaningMode": "Dry",
+        "messageLogs": ["System started"]
+      }'
 
 
---------------------------------------------------
-2. Get Latest Solar Panel Data
---------------------------------------------------
-- URL: /api/solar-data
-- Method: GET
-- Description: Fetches the most recently recorded solar panel data.
+--------------------------------------------------------------------------------
+2. Force Clean Trigger
+--------------------------------------------------------------------------------
+  URL     : /api/solar-data
+  Method  : POST
+  Access  : Public
+  Description:
+    To trigger a manual force clean, send a POST with forceCleaningStatus set
+    to true inside dustStatus. This is used by the frontend "Force Clean" button
+    which is only accessible when operationMode is "Manual".
 
-Request Body:
-None
-
-Success Response (200 OK):
-{
-  "message": "Data fetched successfully.",
-  "data": {
-    "_id": "60d5ecb...",
-    "voltage": 12.5,
-    "current": 2.1,
-    "power": 26.25,
-    "energyToday": 150.5,
-    "avgPower": 25.0,
-    "avgVoltage": 12.0,
-    "efficiency": 0.85,
-    "temperature": 35.5,
-    "aqi": 45,
-    "climate": "Clean",
-    "moisture": 10,
-    "dustStatus": {
-      "status": "Dusty",
-      "dustLevel": 4,
-      "forceCleaningStatus": false
+  Request Body:
+  {
+    "voltage"       : 12.5,
+    "soc"           : 85,
+    "temperature"   : 35.5,
+    "dustStatus"    : {
+      "status"              : "Cleaning",
+      "dustLevel"           : 65,
+      "forceCleaningStatus" : true       // <-- Set TRUE to trigger force clean
     },
-    "messageLogs": [
-      "System started",
-      "Dust detected"
-    ],
-    "createdAt": "2023-10-25T10:00:00.000Z",
-    "updatedAt": "2023-10-25T10:00:00.000Z"
+    "operationMode" : "Manual",
+    "cleaningMode"  : "Dry"
   }
-}
 
---------------------------------------------------
-3. Server Welcome Route
---------------------------------------------------
-- URL: /
-- Method: GET
-- Description: Root endpoint to check if the server is running.
+  Success Response — 201 Created:
+    Same structure as endpoint 1, with forceCleaningStatus: true in the response.
 
-Success Response (200 OK):
-{
-  "message": "Solar Panel monitoring server is working. Use /solar-data to interact with the API."
-}
+  Note:
+    The frontend dashboard only enables this action when the user has selected
+    "Manual" operation mode. In "Auto" mode, the Force Clean button and
+    Cleaning Mode controls are disabled (overlayed and locked).
+
+
+--------------------------------------------------------------------------------
+3. Get Latest Solar Panel Data
+--------------------------------------------------------------------------------
+  URL     : /api/solar-data
+  Method  : GET
+  Access  : Public
+  Description:
+    Returns the most recently saved solar panel record, sorted by updatedAt
+    descending. The frontend polls this endpoint every 2 minutes (120,000 ms).
+
+  Request Body: None
+
+  Success Response — 200 OK:
+  {
+    "message": "Data fetched successfully.",
+    "data": {
+      "_id"          : "60d5ecb54b24a1a3c8f1e2b7",
+      "voltage"      : 12.5,
+      "soc"          : 85,
+      "temperature"  : 35.5,
+      "dustStatus"   : {
+        "status"              : "Dusty",
+        "dustLevel"           : 65,
+        "forceCleaningStatus" : false
+      },
+      "operationMode" : "Auto",
+      "cleaningMode"  : "Dry",
+      "messageLogs"   : ["System started", "Dust detected"],
+      "createdAt"     : "2026-04-06T09:00:00.000Z",
+      "updatedAt"     : "2026-04-06T09:00:00.000Z"
+    }
+  }
+
+  Error Responses:
+    404 Not Found — No records exist yet:
+      { "message": "No data found. Please POST data to create an entry." }
+
+    500 Internal Server Error — Database read failure:
+      { "message": "Failed to fetch data.", "error": "<error details>" }
+
+  Postman / cURL Example:
+    curl https://solar-clening.ionode.cloud/api/solar-data
+
+
+--------------------------------------------------------------------------------
+4. Server Health Check
+--------------------------------------------------------------------------------
+  URL     : /
+  Method  : GET
+  Access  : Public
+  Description:
+    Root endpoint to verify the server is running and reachable.
+
+  Request Body: None
+
+  Success Response — 200 OK:
+  {
+    "message": "Solar Panel monitoring server is working. Use /solar-data to interact with the API."
+  }
+
+  cURL Example:
+    curl https://solar-clening.ionode.cloud/
+
+
+================================================================================
+  DATABASE SCHEMA (Mongoose / MongoDB)
+================================================================================
+
+  Collection : solarpanels
+  Model Name : SolarPanel
+
+  Field              Type       Default    Description
+  -----------------  ---------  ---------  -------------------------------------------
+  voltage            Number     0          Panel voltage in Volts
+  soc                Number     0          State of Charge (SOC) in percentage (%)
+  temperature        Number     0          Panel/environment temperature in °C
+  dustStatus.status  String     "Clean"    Dust state: "Clean" | "Dusty" | "Cleaning"
+  dustStatus.dustLevel Number   0          Dust level percentage (0–100)
+  dustStatus.forceCleaningStatus Boolean false  Whether a force clean was triggered
+  operationMode      String     "Auto"     "Auto" or "Manual"
+  cleaningMode       String     "Dry"      "Dry" or "Wet"
+  messageLogs        [String]   []         Array of log/event messages
+  createdAt          Date       auto       Timestamp of document creation (auto)
+  updatedAt          Date       auto       Timestamp of last update (auto)
+
+
+================================================================================
+  FRONTEND INTEGRATION NOTES
+================================================================================
+
+  1. Polling Interval
+     The React frontend fetches GET /api/solar-data every 120,000 ms (2 min).
+     It also fetches once immediately on component mount.
+
+  2. Operation Mode (UI Behavior)
+     - "Auto"   → Cleaning Mode controls and Force Clean button are DISABLED
+                  (locked with an overlay). Switching back to "Manual" re-enables them.
+     - "Manual" → All controls are fully interactive.
+     - The frontend uses a separate uiMode state so that API polling NEVER
+       overrides the user's manual mode selection.
+
+  3. Sending operationMode / cleaningMode changes
+     When the user toggles Operation Mode or Cleaning Mode in the dashboard,
+     a POST /api/solar-data call is made with the updated value merged into
+     the current data state. This ensures the setting is persisted in MongoDB.
+
+  4. Force Clean Flow
+     Button click (Manual mode only) → POST with forceCleaningStatus: true
+     → UI immediately shows "Cleaning" status
+     → After 5 seconds, GET /api/solar-data is called to refresh actual state.
+
+  5. CORS Allowed Origins
+     - https://solar-clening.api.ionode.cloud  (production frontend)
+     - http://localhost:5173                    (Vite dev server)
+
+  6. Environment Variables
+     Backend (.env):
+       MONGO_URI=mongodb+srv://<user>:<pass>@ionode.ckcssnb.mongodb.net/solar-cleaning
+       PORT=62888
+
+     Frontend (.env):
+       VITE_API_BASE_URL=https://solar-clening.ionode.cloud   (production)
+       VITE_API_BASE_URL=http://localhost:62888               (development)
+
+
+================================================================================
+  ERROR CODE REFERENCE
+================================================================================
+
+  Code  Meaning
+  ----  -----------------------------------------------------------
+  200   OK — Successful GET request
+  201   Created — Successful POST, new data record saved
+  400   Bad Request — Empty request body sent to POST
+  404   Not Found — GET returned no records in the database
+  500   Internal Server Error — MongoDB read/write failure
+
+================================================================================

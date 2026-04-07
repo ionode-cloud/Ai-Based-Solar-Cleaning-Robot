@@ -22,21 +22,15 @@ mongoose.connect(MONGO_URI)
 // Defines the structure for the solar panel data in the database. 
 const solarPanelSchema = new mongoose.Schema({
     voltage: { type: Number, default: 0 },
-    current: { type: Number, default: 0 },
-    power: { type: Number, default: 0 },
-    energyToday: { type: Number, default: 0 },
-    avgPower: { type: Number, default: 0 },
-    avgVoltage: { type: Number, default: 0 },
-    efficiency: { type: Number, default: 0 },
+    soc: { type: Number, default: 0 },
     temperature: { type: Number, default: 0 },
-    aqi : { type : Number, default : 0 },
-    climate : { type : String , default : 'Clean' },
-    moisture : { type : Number , default : 0 },
     dustStatus: {
         status: { type: String, default: 'Clean' }, // Renamed from 'type' to avoid conflict
         dustLevel: { type: Number, default: 0 },
         forceCleaningStatus : {type : Boolean , default : 0}
     },
+    operationMode: { type: String, default: 'Auto' },
+    cleaningMode: { type: String, default: 'Dry' },
     messageLogs : { type: [String] , default: "" }
 }, {
     // Automatically add `createdAt` and `updatedAt` timestamps

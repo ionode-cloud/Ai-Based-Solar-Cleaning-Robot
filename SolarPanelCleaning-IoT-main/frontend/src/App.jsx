@@ -23,16 +23,8 @@ import "./App.css";
 // Initial Mock Data
 const initialMockData = {
   voltage: 0,
-  current: 0,
-  power: 0,
-  avgVoltage: 0,
-  avgPower: 0,
-  energyToday: 0,
-  efficiency: 0,
+  soc: 0,
   temperature: 0,
-  aqi: 0,
-  moisture: 0,
-  climate: "Unknown",
   dustStatus: "Unknown",
   dustLevel: 0,
   cleaningProgress: 0,
@@ -42,15 +34,26 @@ const initialMockData = {
   performanceData: [],
   lastCleaned: null,
   forceCleaningStatus: false,
+  operationMode: "Auto",
+  cleaningMode: "Dry",
 };
 
 const App = () => {
   const [data, setData] = useState(initialMockData);
+  // Separate UI-only state so the API fetch never resets the user's mode choice
+  const [uiMode, setUiMode] = useState(initialMockData.operationMode); // "Auto" | "Manual"
 
   // Fetch Live Data from API
   const fetchSolarData = async () => {
     try {
       const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/solar-data`);
+      const contentType = response.headers.get("content-type");
+      
+      if (!contentType || !contentType.includes("application/json")) {
+        console.error("Oops, API did not return JSON. Check your VITE_API_BASE_URL. Returning HTML error.");
+        return;
+      }
+
       const json = await response.json();
 
       if (json && json.data) {
@@ -66,19 +69,14 @@ const App = () => {
         setData((prev) => ({
           ...prev,
           voltage: latest.voltage,
-          current: latest.current,
-          power: latest.power,
-          avgVoltage: latest.avgVoltage,
-          avgPower: latest.avgPower,
-          energyToday: latest.energyToday,
-          efficiency: latest.efficiency,
+          soc: latest.soc,
           temperature: latest.temperature,
-          aqi: latest.aqi,
-          moisture: latest.moisture,
-          climate: latest.climate,
           dustStatus: latest.dustStatus?.status || "Unknown",
           dustLevel: latest.dustStatus?.dustLevel || 0,
           forceCleaningStatus: latest.dustStatus?.forceCleaningStatus || false,
+          // NOTE: operationMode and cleaningMode are NOT overwritten here —
+          // they are controlled by the user via uiMode / local data state only.
+          cleaningMode: latest.cleaningMode || prev.cleaningMode,
           updatedAt: latest.updatedAt,
           cleaningHistory: [newHistoryEntry, ...prev.cleaningHistory],
         }));
@@ -128,14 +126,56 @@ const App = () => {
         }),
       });
 
-      const result = await response.json();
-      console.log("Force Cleaning Triggered:", result);
+      const contentType = response.headers.get("content-type");
+      if (contentType && contentType.includes("application/json")) {
+        const result = await response.json();
+        console.log("Force Cleaning Triggered:", result);
+      } else {
+        console.warn("Force Cleaning API did not return JSON");
+      }
 
       // Optional: Refresh latest API data after short delay
       setTimeout(fetchSolarData, 5000);
     } catch (error) {
       console.error("Error triggering Force Cleaning:", error);
     }
+  };
+
+  const updateSetting = async (key, value) => {
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/solar-data`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...data,
+          [key]: value
+        }),
+      });
+      
+      const contentType = response.headers.get("content-type");
+      if (contentType && contentType.includes("application/json")) {
+        const result = await response.json();
+        console.log(`Setting ${key} updated:`, result);
+      } else {
+        console.warn(`Setting ${key} API did not return JSON`);
+      }
+      setTimeout(fetchSolarData, 1000);
+    } catch (error) {
+      console.error(`Error updating ${key}:`, error);
+    }
+  };
+
+  const handleOperationModeChange = (mode) => {
+    if (uiMode === mode) return;
+    setUiMode(mode);
+    setData(prev => ({ ...prev, operationMode: mode }));
+    updateSetting("operationMode", mode);
+  };
+
+  const handleCleaningModeChange = (mode) => {
+    if (data.cleaningMode === mode) return;
+    setData(prev => ({ ...prev, cleaningMode: mode }));
+    updateSetting("cleaningMode", mode);
   };
 
   //  Download Data
@@ -155,59 +195,92 @@ const App = () => {
 
   return (
     <div className="dashboard-container">
-      {/* Header */}
+      {/* ── HEADER ── */}
       <header className="header">
         <div>
-          <h1 className="header-title text-white">
-            <span className="text-yellow">Solar</span> Panel
+          <h1 className="header-title">
+            <span className="text-yellow">Solar</span> Panel Cleaning Robot
           </h1>
-          <p className="header-subtitle">AI Based Solar cleaning Robot</p>
+          <p className="header-subtitle">AI-Based Autonomous Cleaning System</p>
         </div>
 
         <div className="header-actions">
           <button onClick={handleDownload} className="download-button" title="Download All Data">
-            <Download size={18} className="download-icon" /> Download Data
+            <Download size={16} /> Download Data
           </button>
-          <div className="text-green" style={{ fontWeight: 600, display: "flex", alignItems: "center" }}>
-            <Wifi size={20} style={{ marginRight: "0.5rem" }} /> System Online
+          <div className="online-badge">
+            <span className="online-dot" />
+            System Online
           </div>
         </div>
       </header>
 
-      {/* Dashboard Layout */}
+      {/* ── DASHBOARD LAYOUT ── */}
       <div className="main-grid">
-        {/* Left Column */}
+
+        {/* ── LEFT COLUMN ── */}
         <div className="data-section">
+
+          {/* Metric Cards */}
           <div className="data-cards-grid">
-            <MetricCard title="Voltage" value={data.voltage} unit="V" icon={Zap} color="#d97706" />
-            <MetricCard title="Current" value={data.current} unit="A" icon={Bolt} color="#059669" />
-            <MetricCard title="Power" value={data.power} unit="kW" icon={Power} color="#dc2626" />
-            <MetricCard title="Energy Today" value={data.energyToday} unit="kWh" icon={Gauge} color="#2563eb" />
-            <MetricCard title="AQI" value={data.aqi} icon={Wind} color="#2e4a82ff" />
-            <MetricCard title="Moisture" value={data.moisture} unit="%" icon={Droplet} color="#775650ff" />
-            <MetricCard title="Climate" value={data.climate} icon={CloudSun} color="#97afe3ff" />
-            <MetricCard title="Temperature" value={data.temperature} unit="°C" icon={ThermometerSun} color="#FFD700" />
+            <MetricCard title="Voltage" value={data.voltage} unit="V" icon={Zap} color="#f59e0b" />
+            <MetricCard title="SOC" value={data.soc} unit="%" icon={Bolt} color="#10b981" />
+            <MetricCard title="Temperature" value={data.temperature} unit="°C" icon={ThermometerSun} color="#f87171" />
           </div>
 
-          {/* Hourly Status */}
-          <h3 className="hourly-status-section-title">Last Hourly Status</h3>
-          <div className="hourly-status-grid">
-            <HourlyStatusCard title="Avg Power" value={data.avgPower.toFixed(1)} unit="kW" color="#f87171" icon={Power} />
-            <HourlyStatusCard title="Avg Voltage" value={data.avgVoltage.toFixed(1)} unit="V" color="#facc15" icon={Zap} />
-            <HourlyStatusCard title="Efficiency" value={data.efficiency} unit="%" color="#4ade80" icon={TrendingUp} />
-            <HourlyStatusCard title="Temperature" value={data.temperature} unit="°C" color="#60a5fa" icon={Thermometer} />
+          {/* Control Panel */}
+          <div className="hourly-status-section-title" style={{ marginTop: '8px' }}>Control Panel</div>
+          <div className="control-panel-grid">
+
+            {/* Operation Mode Card */}
+            <div className="control-card">
+              <span className="control-card-label">Operation Mode</span>
+              <div className="mode-toggle">
+                <button
+                  className={`mode-btn ${data.operationMode === "Auto" ? "active-green" : ""}`}
+                  onClick={() => handleOperationModeChange("Auto")}>
+                  Auto
+                </button>
+                <button
+                  className={`mode-btn ${data.operationMode === "Manual" ? "active-blue" : ""}`}
+                  onClick={() => handleOperationModeChange("Manual")}>
+                  Manual
+                </button>
+              </div>
+            </div>
+
+            {/* Cleaning Mode Card — locked in Auto mode */}
+            <div className={`control-card${uiMode === "Auto" ? " panel-locked" : ""}`}>
+              <span className="control-card-label">Cleaning Mode</span>
+              <div className="mode-toggle">
+                <button
+                  className={`mode-btn ${data.cleaningMode === "Dry" ? "active-amber" : ""}`}
+                  onClick={() => handleCleaningModeChange("Dry")}
+                  disabled={uiMode === "Auto"}>
+                  Dry
+                </button>
+                <button
+                  className={`mode-btn ${data.cleaningMode === "Wet" ? "active-sky" : ""}`}
+                  onClick={() => handleCleaningModeChange("Wet")}
+                  disabled={uiMode === "Auto"}>
+                  Wet
+                </button>
+              </div>
+            </div>
+
           </div>
 
-          {/* Dust Level */}
+          {/* Dust Level Bar — locked in Auto mode */}
           <DustLevelBar
             percentage={data.dustLevel}
             status={data.dustStatus}
             lastCleaned={data.lastCleaned}
             onForceClean={handleForceClean}
+            isAutoMode={uiMode === "Auto"}
           />
         </div>
 
-        {/* Right Column */}
+        {/* ── RIGHT COLUMN ── */}
         <div className="video-column">
           <LiveVideoPanel
             progress={data.cleaningProgress}
@@ -219,10 +292,11 @@ const App = () => {
         </div>
       </div>
 
-      {/* Chart */}
+      {/* ── CHART ── */}
       <PerformanceChart data={data.performanceData} />
     </div>
   );
 };
 
 export default App;
+

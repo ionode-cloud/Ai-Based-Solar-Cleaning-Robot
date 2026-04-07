@@ -21,7 +21,7 @@ export const generatePerformanceData = () => {
 
 export const initialMockData = {
   voltage: 48.0,
-  current: 11.6,
+  soc: 85,
   power: 1.4,
   energyToday: 28.0,
   dustLevel: 55,
