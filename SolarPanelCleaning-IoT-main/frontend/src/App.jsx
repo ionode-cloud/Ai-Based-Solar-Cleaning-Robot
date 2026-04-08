@@ -68,11 +68,11 @@ const App = () => {
 
         setData((prev) => ({
           ...prev,
-          voltage: latest.voltage,
-          soc: latest.soc,
-          temperature: latest.temperature,
+          voltage: latest.voltage ?? prev.voltage,
+          soc: latest.soc ?? prev.soc,
+          temperature: latest.temperature ?? prev.temperature,
           dustStatus: latest.dustStatus?.status || "Unknown",
-          dustLevel: latest.dustStatus?.dustLevel || 0,
+          dustLevel: latest.dustStatus?.dustLevel ?? prev.dustLevel,
           forceCleaningStatus: latest.dustStatus?.forceCleaningStatus || false,
           // NOTE: operationMode and cleaningMode are NOT overwritten here —
           // they are controlled by the user via uiMode / local data state only.

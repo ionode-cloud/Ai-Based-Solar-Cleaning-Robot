@@ -30,9 +30,9 @@ const PerformanceChart = () => {
       if (json?.data) {
         // Convert API object to array of data
         const chartData = [
-          { metric: "Voltage", value: json.data.voltage },
-          { metric: "SOC (%)", value: json.data.soc },
-          { metric: "Temperature", value: json.data.temperature },
+          { metric: "Voltage", value: json.data.voltage ?? 0 },
+          { metric: "SOC (%)", value: json.data.soc ?? 0 },
+          { metric: "Temperature", value: json.data.temperature ?? 0 },
           { metric: "Dust Level", value: json.data.dustStatus?.dustLevel || 0 },
         ];
 
