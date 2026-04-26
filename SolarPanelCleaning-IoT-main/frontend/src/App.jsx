@@ -46,7 +46,12 @@ const App = () => {
   // Fetch Live Data from API
   const fetchSolarData = async () => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/solar-data`);
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/solar-data`, {
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache'
+        }
+      });
       const contentType = response.headers.get("content-type");
       
       if (!contentType || !contentType.includes("application/json")) {
@@ -66,20 +71,29 @@ const App = () => {
           updatedAt: latest.updatedAt,
         };
 
-        setData((prev) => ({
-          ...prev,
-          voltage: latest.voltage ?? prev.voltage,
-          soc: latest.soc ?? prev.soc,
-          temperature: latest.temperature ?? prev.temperature,
-          dustStatus: latest.dustStatus?.status || "Unknown",
-          dustLevel: latest.dustStatus?.dustLevel ?? prev.dustLevel,
-          forceCleaningStatus: latest.dustStatus?.forceCleaningStatus || false,
-          // NOTE: operationMode and cleaningMode are NOT overwritten here —
-          // they are controlled by the user via uiMode / local data state only.
-          cleaningMode: latest.cleaningMode || prev.cleaningMode,
-          updatedAt: latest.updatedAt,
-          cleaningHistory: [newHistoryEntry, ...prev.cleaningHistory],
-        }));
+        if (latest.operationMode) {
+          setUiMode(latest.operationMode);
+        }
+
+        setData((prev) => {
+          // Prevent duplicate history entries for the same updatedAt timestamp
+          const isDuplicate = prev.cleaningHistory.some(entry => entry.updatedAt === latest.updatedAt);
+          const newHistory = isDuplicate ? prev.cleaningHistory : [newHistoryEntry, ...prev.cleaningHistory];
+
+          return {
+            ...prev,
+            voltage: latest.voltage ?? prev.voltage,
+            soc: latest.soc ?? prev.soc,
+            temperature: latest.temperature ?? prev.temperature,
+            dustStatus: latest.dustStatus?.status || "Unknown",
+            dustLevel: latest.dustStatus?.dustLevel ?? prev.dustLevel,
+            forceCleaningStatus: latest.dustStatus?.forceCleaningStatus || false,
+            operationMode: latest.operationMode || prev.operationMode,
+            cleaningMode: latest.cleaningMode || prev.cleaningMode,
+            updatedAt: latest.updatedAt,
+            cleaningHistory: newHistory,
+          };
+        });
       }
     } catch (error) {
       console.error("Error fetching live data:", error);
@@ -106,6 +120,7 @@ const App = () => {
     setData((prev) => ({
       ...prev,
       dustStatus: "Cleaning",
+      dustLevel: 0,
       forceCleaningStatus: true,
       cleaningHistory: [newEntry, ...prev.cleaningHistory],
     }));
@@ -117,10 +132,10 @@ const App = () => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          ...data,
+          ...dataRef.current,
           dustStatus: {
             status: "Cleaning",
-            dustLevel: data.dustLevel,
+            dustLevel: 0,
             forceCleaningStatus: true, //  set TRUE
           },
         }),
@@ -134,21 +149,60 @@ const App = () => {
         console.warn("Force Cleaning API did not return JSON");
       }
 
-      // Optional: Refresh latest API data after short delay
-      setTimeout(fetchSolarData, 5000);
+      // Wait 5 seconds to simulate cleaning cycle, then reset dust to 0 and 'Clean'
+      setTimeout(async () => {
+        const cleanData = {
+          ...dataRef.current,
+          dustStatus: {
+            status: "Clean",
+            dustLevel: 0,
+            forceCleaningStatus: false,
+          },
+        };
+        
+        setData((prev) => ({
+          ...prev,
+          dustStatus: "Clean",
+          dustLevel: 0,
+          forceCleaningStatus: false,
+        }));
+        
+        try {
+          await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/solar-data`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(cleanData),
+          });
+          fetchSolarData();
+        } catch (e) {
+          console.error("Error finalizing clean:", e);
+        }
+      }, 5000);
     } catch (error) {
       console.error("Error triggering Force Cleaning:", error);
     }
   };
 
+  const dataRef = React.useRef(data);
+  useEffect(() => {
+    dataRef.current = data;
+  }, [data]);
+
   const updateSetting = async (key, value) => {
+    const currentData = { ...dataRef.current, [key]: value };
+    dataRef.current = currentData;
+
     try {
       const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/solar-data`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          ...data,
-          [key]: value
+          ...currentData,
+          dustStatus: {
+            status: key === 'dustStatus' ? value : currentData.dustStatus,
+            dustLevel: key === 'dustLevel' ? value : currentData.dustLevel,
+            forceCleaningStatus: key === 'forceCleaningStatus' ? value : currentData.forceCleaningStatus,
+          }
         }),
       });
       

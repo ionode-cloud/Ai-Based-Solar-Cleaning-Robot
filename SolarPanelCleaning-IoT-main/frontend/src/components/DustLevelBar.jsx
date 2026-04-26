@@ -31,7 +31,6 @@ const DustLevelBar = ({ percentage, status, lastCleaned, onForceClean, addCleani
 
       setTimeout(() => {
         setIsCleaning(false);
-        setCurrentStatus("Force Cleaning");
       }, 5000);
     }
   };

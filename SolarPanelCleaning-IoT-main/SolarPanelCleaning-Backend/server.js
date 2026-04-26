@@ -8,7 +8,7 @@ dotenv.config();
 // --- 1. INITIALIZE EXPRESS APP ---
 const app = express();
 app.use(express.json()); // Middleware to parse JSON bodies
-app.use(cors({ origin: ['https://solar-cleaning-tite.ionode.cloud','https://solar-cleaning-kit.api.ionode.cloud', 'https://solar-clening.api.ionode.cloud', 'http://localhost:5173'] }));
+app.use(cors({ origin: ['https://solar-cleaning-kit.api.ionode.cloud', 'https://solar-clening.api.ionode.cloud', 'http://localhost:5173'] }));
 
 // --- 2. DATABASE CONNECTION ---
 // Reusing the connection string. Data will be stored in a new collection.
@@ -72,7 +72,7 @@ app.post('/api/solar-data', async (req, res) => {
     const savedData = await SolarPanel.create(newData);
 
     // 2️⃣ Fetch the latest entry (by creation time or _id)
-    const latestData = await SolarPanel.findOne().sort({ createdAt: -1 }); // assuming you have timestamps in schema
+    const latestData = await SolarPanel.findOne().sort({ _id: -1 }); // assuming you have timestamps in schema
 
     res.status(201).json({
       message: "Data saved successfully.",
@@ -97,8 +97,8 @@ app.post('/api/solar-data', async (req, res) => {
 app.get('/api/solar-data', async (req, res) => {
     try {
         // Find the single document for the solar panel.
-        // Sorting by `updatedAt` ensures you get the latest state if you ever have more than one.
-        const panelData = await SolarPanel.findOne().sort({ updatedAt: -1 });
+        // Sorting by `_id` ensures you strictly get the latest state inserted.
+        const panelData = await SolarPanel.findOne().sort({ _id: -1 });
 
         if (!panelData) {
             return res.status(404).json({ message: "No data found. Please POST data to create an entry." });
