@@ -8,11 +8,11 @@ dotenv.config();
 // --- 1. INITIALIZE EXPRESS APP ---
 const app = express();
 app.use(express.json()); // Middleware to parse JSON bodies
-app.use(cors({ origin: ['https://solar-cleaning-kit.api.ionode.cloud', 'https://solar-clening.api.ionode.cloud', 'http://localhost:5173'] }));
+app.use(cors());
 
 // --- 2. DATABASE CONNECTION ---
 // Reusing the connection string. Data will be stored in a new collection.
-const MONGO_URI = process.env.MONGO_URI || 'mongodb+srv://ionode:ionode@ionode.qgqbadm.mongodb.net/ConveyorBeltBreakdownSys?retryWrites=true&w=majority&appName=ionode';
+const MONGO_URI = process.env.MONGO_URI ;
 
 mongoose.connect(MONGO_URI)
     .then(() => console.log('MongoDB connected successfully.'))
@@ -24,6 +24,7 @@ const solarPanelSchema = new mongoose.Schema({
     voltage: { type: Number, default: 0 },
     soc: { type: Number, default: 0 },
     temperature: { type: Number, default: 0 },
+    dustLevel: { type: Number, default: 0 },
     dustStatus: {
         status: { type: String, default: 'Clean' }, // Renamed from 'type' to avoid conflict
         dustLevel: { type: Number, default: 0 },

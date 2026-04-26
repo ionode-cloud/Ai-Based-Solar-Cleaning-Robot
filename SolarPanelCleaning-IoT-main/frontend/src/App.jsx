@@ -102,7 +102,7 @@ const App = () => {
 
   useEffect(() => {
     fetchSolarData();
-    const interval = setInterval(fetchSolarData, 120000); // 2 min refresh
+    const interval = setInterval(fetchSolarData, 2000); // 2 sec refresh
     return () => clearInterval(interval);
   }, []);
 
@@ -133,6 +133,7 @@ const App = () => {
         },
         body: JSON.stringify({
           ...dataRef.current,
+          dustLevel: 0,
           dustStatus: {
             status: "Cleaning",
             dustLevel: 0,
@@ -153,6 +154,7 @@ const App = () => {
       setTimeout(async () => {
         const cleanData = {
           ...dataRef.current,
+          dustLevel: 0,
           dustStatus: {
             status: "Clean",
             dustLevel: 0,
